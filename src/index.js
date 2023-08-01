@@ -1,10 +1,15 @@
-import express from "express";
-import bcrypt from "bcrypt";
-import cors from "cors";
-import bodyParser from "body-parser";
-import fs from "fs";
-import jwt from "jsonwebtoken";
-import * as dotenv from "dotenv";
+const express = require("express");
+const bcrypt = require("bcrypt");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+// import {sequelize} from "./../db/database.mjs";
+const sequelize = require("./../db/database");
+// import fs from "fs";
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
+
+const User = require("./../model/User");
+
 dotenv.config();
 
 const app = express();
@@ -14,6 +19,9 @@ const TOKEN_KEY = process.env.SECRET;
 app.use(cors());
 app.use(bodyParser.json());
 
+sequelize.sync().then(() => {
+  console.log("db is ready");
+});
 //add bookmarks
 
 //middle ware
@@ -74,28 +82,37 @@ app.post("/login", async (req, res) => {
   //     res.json({ error });
   //   }
 });
+app.post("/user", (req, res) => {
+  console.log(req.body)
+  let data={
+
+  }
+  User.create(req.body).then(()=>{
+    res.send('success')
+  })
+});
 
 app.post("/signup", async (req, res) => {
-  try {
-    // response sender
-    function resSender(result) {
-      console.log(result);
-      res.json(result);
-    }
-    const SALTROUNDS = 10;
-    let loginData = req.body;
-    // hashing password
-    bcrypt.genSalt(SALTROUNDS, function (err, salt) {
-      bcrypt.hash(loginData.password, salt, function (err, hash) {
-        const DATA_BASE = new DB();
-        DATA_BASE.create(loginData.email, hash, resSender);
-        console.log(hash);
-      });
-    });
-  } catch (error) {
-    console.log(error);
-    res.json({ error });
-  }
+  // try {
+  //   // response sender
+  //   function resSender(result) {
+  //     console.log(result);
+  //     res.json(result);
+  //   }
+  //   const SALTROUNDS = 10;
+  //   let loginData = req.body;
+  //   // hashing password
+  //   bcrypt.genSalt(SALTROUNDS, function (err, salt) {
+  //     bcrypt.hash(loginData.password, salt, function (err, hash) {
+  //       const DATA_BASE = new DB();
+  //       DATA_BASE.create(loginData.email, hash, resSender);
+  //       console.log(hash);
+  //     });
+  //   });
+  // } catch (error) {
+  //   console.log(error);
+  //   res.json({ error });
+  // }
 });
 
 app.listen(PORT_NUMBER, () => {
