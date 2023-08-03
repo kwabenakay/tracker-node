@@ -159,6 +159,34 @@ app.post("/addprocess", (req, res) => {
     });
 });
 
+app.get("/getprocess", (req, res) => {
+  Process.findAll({
+    where: {
+      id: req.body.processId,
+    },
+  })
+    .then((response) => {
+      res.send(response);
+    })
+    .catch(() => {
+      res.send("Error anfa");
+    });
+});
+
+app.get("/getjob", (req, res) => {
+  Job.findAll({
+    where: {
+      id: req.body.jobId,
+    },
+  })
+    .then((response) => {
+      res.send(response);
+    })
+    .catch(() => {
+      res.send("Error anfa");
+    });
+});
+
 app.listen(PORT_NUMBER, () => {
   console.log(`TRACKER SERVER
 		http://localhost:${PORT_NUMBER}/`);

@@ -29,8 +29,6 @@ User.init(
 User.hasMany(Process, { foreignKey: "creator" });
 User.hasMany(Process, { foreignKey: "receiver" });
 User.hasMany(Job, { foreignKey: "creator" });
-User.hasMany(Job, { foreignKey: "reciver" });
-Process.belongsTo(User);
-Job.belongsTo(User);
+User.hasMany(Job, { foreignKey: "receiver" });
 
 module.exports = User;
