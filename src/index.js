@@ -78,12 +78,10 @@ app.post("/login", async (req, res) => {
       });
     });
   } catch (error) {
-    console.log(error);
     res.json({ error });
   }
 });
 app.post("/adduser", (req, res) => {
-  console.log(req.body);
   const SALTROUNDS = 10;
   bcrypt.genSalt(SALTROUNDS, function (err, salt) {
     bcrypt.hash(req.body.password, salt, function (err, hash) {
@@ -98,7 +96,6 @@ app.post("/adduser", (req, res) => {
   });
 });
 app.get("/user", (req, res) => {
-  console.log(req.body);
   User.findAll({
     where: {
       id: req.body.id,
@@ -108,31 +105,26 @@ app.get("/user", (req, res) => {
   });
 });
 
-app.post("/signup", async (req, res) => {
-  // try {
-  //   // response sender
-  //   function resSender(result) {
-  //     console.log(result);
-  //     res.json(result);
-  //   }
-  //   const SALTROUNDS = 10;
-  //   let loginData = req.body;
-  // hashing password
-  // bcrypt.genSalt(SALTROUNDS, function (err, salt) {
-  //   bcrypt.hash(loginData.password, salt, function (err, hash) {
-  //     const DATA_BASE = new DB();
-  //     DATA_BASE.create(loginData.email, hash, resSender);
-  //     console.log(hash);
-  //   });
-  // });
-  // } catch (error) {
-  //   console.log(error);
-  //   res.json({ error });
-  // }
-});
+// app.post("/add", async (req, res) => {
+//   try {
+//     // response sender
+//     const SALTROUNDS = 10;
+//     let loginData = req.body;
+//     bcrypt.genSalt(SALTROUNDS, function (err, salt) {
+//       bcrypt.hash(loginData.password, salt, function (err, hash) {
+//         User.create(req.body).then((response)=>{
+//           res.send(`${response.name} has been added`)
+//         })
+//         console.log(hash);
+//       });
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     res.json({ error });
+//   }
+// });
 
 app.post("/addjob", (req, res) => {
-  console.log(req.body);
   let input = { ...req.body };
   Job.create(input)
     .then((jobOutput) => {

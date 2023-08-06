@@ -1,31 +1,31 @@
 const { Model, DataTypes } = require("sequelize");
 const sequelize = require("./../db/database");
-const Process = require("./Process");
+const User = require("./User");
 
-class Job extends Model {}
+class Courier extends Model {}
 
-Job.init(
+Courier.init(
   {
-    jobName: {
+    sender: {
       type: DataTypes.STRING,
     },
-    creator: {
+    subject: {
       type: DataTypes.NUMBER,
     },
-    receiver: {
+    receiverId: {
       type: DataTypes.NUMBER,
     },
+    dateOnLetter: {
+        type: DataTypes.NUMBER,
+      },
     remarks: {
       type: DataTypes.STRING,
     },
   },
   {
     sequelize,
-    modelName: "job",
+    modelName: "courier",
   }
 );
 
-Job.hasMany(Process, { foreignKey: "jobId" });
-Process.belongsTo(Job);
-
-module.exports = Job;
+module.exports = Courier;
