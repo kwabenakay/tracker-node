@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 const sequelize = require("./../db/database");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
+const cookieParser = require("cookie-parser");
 
 const User = require("./../model/User");
 const Job = require("./../model/Job");
@@ -18,6 +19,7 @@ const TOKEN_KEY = process.env.SECRET || "kay";
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(cookieParser());
 
 sequelize.sync().then(() => {
   console.log("db is ready");
@@ -38,6 +40,17 @@ sequelize.sync().then(() => {
 //   }
 // }
 
+function verifyToken(req, res, next) {
+  const token = req.cookies.token;
+  const user = jwt.verify(token, TOKEN_KEY);
+  if (user) {
+    next();
+  } else {
+    res.send("Login first");
+    // res.redirect("/login");
+  }
+}
+
 //get requests
 app.get("/", (req, res) => {
   res.send("working");
@@ -45,36 +58,44 @@ app.get("/", (req, res) => {
 
 //post requests
 app.post("/login", (req, res) => {
-  let loginData = req.body;
+  let loginData = { email: req.body.email, password: req.body.password };
   try {
     // Create token
     console.log(TOKEN_KEY);
     const token = jwt.sign(loginData, TOKEN_KEY, {
-      expiresIn: "1h",
+      expiresIn: "14h",
     });
 
     User.findOne({
       where: {
-        email: req.body.email,
+        email: loginData.email,
       },
       include: [{ model: Process, as: "processes" }],
     })
       .then((response) => {
         if (response) {
           console.log("working");
-          bcrypt.compare(req.body.password, response.password, (_, isMatch) => {
-            if (isMatch && response.isActivated) {
-              let data = {
-                name: response.username,
-                email: response.email,
-                process: response.processes,
-              };
-              console.log(response);
-              res.send({ data, token });
-            } else {
-              res.send("Unable to login");
+          bcrypt.compare(
+            loginData.password,
+            response.password,
+            (_, isMatch) => {
+              if (isMatch && response.isActivated) {
+                let data = {
+                  name: response.username,
+                  email: response.email,
+                  process: response.processes,
+                };
+                console.log(response);
+                res.cookie(
+                  { name: "token", val: token },
+                  { expire: 360000 + Date.now() }
+                );
+                res.send({ data });
+              } else {
+                res.send("Unable to login");
+              }
             }
-          });
+          );
         } else {
           res.send("User not found");
         }
@@ -87,7 +108,7 @@ app.post("/login", (req, res) => {
     res.json({ error });
   }
 });
-app.post("/adduser", (req, res) => {
+app.post("/adduser", verifyToken, (req, res) => {
   try {
     const SALTROUNDS = 10;
     bcrypt.genSalt(SALTROUNDS, function (err, salt) {
@@ -105,7 +126,7 @@ app.post("/adduser", (req, res) => {
     res.json({ error });
   }
 });
-app.get("/getuser", (req, res) => {
+app.get("/getuser", verifyToken, (req, res) => {
   User.findAll({
     where: {
       id: req.body.id,
@@ -136,7 +157,7 @@ app.get("/getuser", (req, res) => {
 //   }
 // });
 
-app.post("/addjob", (req, res) => {
+app.post("/addjob", verifyToken, (req, res) => {
   let input = { ...req.body };
   Job.create(input)
     .then((jobOutput) => {
@@ -153,7 +174,7 @@ app.post("/addjob", (req, res) => {
     });
 });
 
-app.post("/addprocess", (req, res) => {
+app.post("/addprocess", verifyToken, (req, res) => {
   Process.create(req.body)
     .then(() => {
       res.send("added");
@@ -163,7 +184,7 @@ app.post("/addprocess", (req, res) => {
     });
 });
 
-app.get("/getprocess", (req, res) => {
+app.get("/getprocess", verifyToken, (req, res) => {
   Process.findAll({
     where: {
       id: req.body.processId,
@@ -177,7 +198,7 @@ app.get("/getprocess", (req, res) => {
     });
 });
 
-app.get("/getjob", (req, res) => {
+app.get("/getjob", verifyToken, (req, res) => {
   Job.findAll({
     where: {
       id: req.body.jobId,
