@@ -19,6 +19,9 @@ User.init(
     userType: {
       type: DataTypes.STRING,
     },
+    isActivated: {
+      type: DataTypes.BOOLEAN,
+    },
   },
   {
     sequelize,

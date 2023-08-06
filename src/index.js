@@ -44,7 +44,7 @@ app.get("/", (req, res) => {
 });
 
 //post requests
-app.post("/login", async (req, res) => {
+app.post("/login", (req, res) => {
   let loginData = req.body;
   try {
     // Create token
@@ -52,25 +52,49 @@ app.post("/login", async (req, res) => {
     const token = jwt.sign(loginData, TOKEN_KEY, {
       expiresIn: "1h",
     });
+
+    User.findOne({
+      where: {
+        email: req.body.email,
+      },
+      include: [{ model: Process, as: "processes" }],
+    })
+      .then((response) => {
+        if (response) {
+          console.log("working");
+          bcrypt.compare(req.body.password, response.password, (_, isMatch) => {
+            if (isMatch && response.isActivated) {
+              let data = {
+                name: response.username,
+                email: response.email,
+                process: response.processes,
+              };
+              console.log(response);
+              res.send({ data, token });
+            } else {
+              res.send("Unable to login");
+            }
+          });
+        } else {
+          res.send("User not found");
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+        res.send("Wrong username or password");
+      });
+  } catch (error) {
+    res.json({ error });
+  }
+});
+app.post("/adduser", (req, res) => {
+  try {
     const SALTROUNDS = 10;
     bcrypt.genSalt(SALTROUNDS, function (err, salt) {
       bcrypt.hash(req.body.password, salt, function (err, hash) {
-        User.findOne({
-          where: {
-            email: req.body.email,
-          },
-        }).then((response) => {
-          if (response) {
-            bcrypt.compare(
-              req.body.password,
-              response.password,
-              (err, isMatch) => {
-                if (isMatch) {
-                  res.send({ ...response, token });
-                }
-              }
-            );
-          }
+        req.body.password = hash;
+        User.create(req.body).then(() => {
+          res.send("success");
         });
         if (err) {
           res.send("anfa");
@@ -81,28 +105,16 @@ app.post("/login", async (req, res) => {
     res.json({ error });
   }
 });
-app.post("/adduser", (req, res) => {
-  const SALTROUNDS = 10;
-  bcrypt.genSalt(SALTROUNDS, function (err, salt) {
-    bcrypt.hash(req.body.password, salt, function (err, hash) {
-      req.body.password = hash;
-      User.create(req.body).then(() => {
-        res.send("success");
-      });
-      if (err) {
-        res.send("anfa");
-      }
-    });
-  });
-});
-app.get("/user", (req, res) => {
+app.get("/getuser", (req, res) => {
   User.findAll({
     where: {
       id: req.body.id,
     },
-  }).then((output) => {
-    res.send(output);
-  });
+  })
+    .then((output) => {
+      res.send(output);
+    })
+    .catch((error) => console.log(error));
 });
 
 // app.post("/add", async (req, res) => {
