@@ -2,17 +2,17 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const sequelize = require("./../db/database");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
+const Sequelize = require("sequelize");
 
+const sequelize = require("./../db/database");
 const User = require("./../model/User");
 const Job = require("./../model/Job");
 const Process = require("./../model/Process");
 
 dotenv.config();
-
 const app = express();
 const PORT_NUMBER = Number(process.env.PROCESS) || 3000;
 const TOKEN_KEY = process.env.SECRET || "kay";
@@ -20,38 +20,30 @@ const TOKEN_KEY = process.env.SECRET || "kay";
 app.use(cors());
 app.use(bodyParser.json());
 app.use(cookieParser());
+app.use(
+  bodyParser.urlencoded({
+    extended: true,
+  })
+);
 
 sequelize.sync().then(() => {
   console.log("db is ready");
 });
-//add bookmarks
 
 //middle ware
-// function verifyToken(req, res, next) {
-//   let loginData = req.body;
-//   const token = req.cookies.token;
-//   const user = jwt.verify(token, TOKEN_KEY);
-//   function sort(row) {
-//     if (row) {
-//       next();
-//     } else {
-//       res.redirect("/login");
-//     }
-//   }
-// }
 
 function verifyToken(req, res, next) {
-  const token = req.cookies.token;
+  const token = req.body.token;
+  console.log("req.body")
+  console.log(req.body)
   const user = jwt.verify(token, TOKEN_KEY);
   if (user) {
     next();
   } else {
     res.send("Login first");
-    // res.redirect("/login");
   }
 }
 
-//get requests
 app.get("/", (req, res) => {
   res.send("working");
 });
@@ -60,8 +52,7 @@ app.get("/", (req, res) => {
 app.post("/login", (req, res) => {
   let loginData = { email: req.body.email, password: req.body.password };
   try {
-    // Create token
-    console.log(TOKEN_KEY);
+    console.log(req.body);
     const token = jwt.sign(loginData, TOKEN_KEY, {
       expiresIn: "14h",
     });
@@ -70,7 +61,26 @@ app.post("/login", (req, res) => {
       where: {
         email: loginData.email,
       },
-      include: [{ model: Process, as: "processes" }],
+      include: [
+        {
+          model: Process,
+          as: "processes",
+          include: [
+            {
+              model: User,
+              as: "user",
+              where: { id: Sequelize.col("processes.creator") },
+              attributes: ["email"],
+            },
+            {
+              model: Job,
+              as: "job",
+              where: { id: Sequelize.col("processes.jobId") },
+              attributes: ["jobName"],
+            },
+          ],
+        },
+      ],
     })
       .then((response) => {
         if (response) {
@@ -81,16 +91,15 @@ app.post("/login", (req, res) => {
             (_, isMatch) => {
               if (isMatch && response.isActivated) {
                 let data = {
+                  id: response.id,
                   name: response.username,
                   email: response.email,
                   process: response.processes,
                 };
                 console.log(response);
-                res.cookie(
-                  { name: "token", val: token },
-                  { expire: 360000 + Date.now() }
-                );
-                res.send({ data });
+
+                res.cookie("token", token);
+                res.send({ data ,token});
               } else {
                 res.send("Unable to login");
               }
@@ -105,13 +114,15 @@ app.post("/login", (req, res) => {
         res.send("Wrong username or password");
       });
   } catch (error) {
+    console.log(error);
     res.json({ error });
   }
 });
+
 app.post("/adduser", verifyToken, (req, res) => {
   try {
     const SALTROUNDS = 10;
-    bcrypt.genSalt(SALTROUNDS, function (err, salt) {
+    bcrypt.genSalt(SALTROUNDS, function (_, salt) {
       bcrypt.hash(req.body.password, salt, function (err, hash) {
         req.body.password = hash;
         User.create(req.body).then(() => {
@@ -126,6 +137,7 @@ app.post("/adduser", verifyToken, (req, res) => {
     res.json({ error });
   }
 });
+
 app.get("/getuser", verifyToken, (req, res) => {
   User.findAll({
     where: {
@@ -137,25 +149,6 @@ app.get("/getuser", verifyToken, (req, res) => {
     })
     .catch((error) => console.log(error));
 });
-
-// app.post("/add", async (req, res) => {
-//   try {
-//     // response sender
-//     const SALTROUNDS = 10;
-//     let loginData = req.body;
-//     bcrypt.genSalt(SALTROUNDS, function (err, salt) {
-//       bcrypt.hash(loginData.password, salt, function (err, hash) {
-//         User.create(req.body).then((response)=>{
-//           res.send(`${response.name} has been added`)
-//         })
-//         console.log(hash);
-//       });
-//     });
-//   } catch (error) {
-//     console.log(error);
-//     res.json({ error });
-//   }
-// });
 
 app.post("/addjob", verifyToken, (req, res) => {
   let input = { ...req.body };
@@ -194,6 +187,21 @@ app.get("/getprocess", verifyToken, (req, res) => {
       res.send(response);
     })
     .catch(() => {
+      res.send("Error anfa");
+    });
+});
+
+app.get("/sentprocess", verifyToken, (req, res) => {
+  Process.findAll({
+    where: {
+      creator: req.body.userId,
+    },
+  })
+    .then((response) => {
+      res.send(response);
+    })
+    .catch((error) => {
+      console.log(error)
       res.send("Error anfa");
     });
 });
